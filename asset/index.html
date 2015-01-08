@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+    </style>
+  </head>
+  <body>
+    <ul id="messages"></ul>
+    <form action="">
+      <input id="m" autocomplete="off" /><button>Send</button>
+    </form>
+    <script src="/socket.io.js"></script>
+    <script src="/jquery-1.11.1.js"></script>
+    <script>
+      var socket = io();
+      $('form').submit(function(){
+        socket.emit('chat message', $('#m').val());
+        $('#m').val('');
+        return false;
+      });
+      socket.on('chat message', function(msg){
+        $('#messages').append($('<li>').text(msg));
+      });
+
+      function Aclick() {
+        socket.emit('cmd', JSON.stringify({x:1,y:1,z:0}))
+      }
+      function Bclick() {
+        socket.emit('cmd', JSON.stringify({x:2,y:2,z:0}))
+      }
+      function Cclick() {
+        socket.emit('cmd', JSON.stringify({x:3,y:3,z:0}))
+      }
+      function Dclick() {
+        socket.emit('cmd', JSON.stringify({x:3,y:3,z:0}))
+      }
+      function UpClick() {
+        socket.emit('cmd', JSON.stringify({x:3,y:3,z:0}))
+      }
+      function DownClick() {
+        socket.emit('cmd', JSON.stringify({x:3,y:3,z:0}))
+      }
+
+      var oldGamma, olbBeta, oldAlpha;
+
+      if (window.DeviceOrientationEvent) {
+        console.log("DeviceOrientation is supported");
+        socket.emit('msga', "DeviceOrientation is supported")
+        window.addEventListener('deviceorientation', function(eventData) {
+          // gamma is the left-to-right tilt in degrees, where right is positive
+          var tiltLR = Math.round(eventData.gamma);
+
+          // beta is the front-to-back tilt in degrees, where front is positive
+          var tiltFB = Math.round(-eventData.beta);
+
+          // alpha is the compass direction the device is facing in degrees
+          var dir = Math.round(eventData.alpha)
+
+          if (oldGamma == tiltLR && olbBeta == tiltFB && oldAlpha == dir)
+            return;
+
+          oldGamma = tiltLR;
+          olbBeta = tiltFB;
+          oldAlpha = dir;
+
+          // call our orientation event handler
+          deviceOrientationHandler(tiltLR, tiltFB, dir);
+        }, false);
+      }
+
+      function deviceOrientationHandler(tiltLR, tiltFB, dir) {
+        document.getElementById("doTiltLR").innerHTML = //Math.round(tiltLR);
+        tiltLR;
+        document.getElementById("doTiltFB").innerHTML = //Math.round(tiltFB);
+        tiltFB;
+        document.getElementById("doDirection").innerHTML = //Math.round(dir);
+        dir;
+
+        socket.emit('orientation', JSON.stringify({lr:tiltLR,fb:tiltFB,d:dir}))
+
+        // // Apply the transform to the image
+        // var logo = document.getElementById("imgLogo");
+        // logo.style.webkitTransform =
+        //   "rotate("+ tiltLR +"deg) rotate3d(1,0,0, "+ (tiltFB*-1)+"deg)";
+        // logo.style.MozTransform = "rotate("+ tiltLR +"deg)";
+        // logo.style.transform =
+        //   "rotate("+ tiltLR +"deg) rotate3d(1,0,0, "+ (tiltFB*-1)+"deg)";
+      }
+
+    </script>
+    <button onclick=Aclick()>AAA</button>
+    <button onclick=Bclick()>BBB</button>
+    <button onclick=Cclick()>CCC</button>
+    <button onclick=Dclick()>DDD</button>
+    <button onclick=UpClick()>up</button>
+    <button onclick=DownClick()>down</button>
+
+
+    <div class="main">
+    <h2>Device Orientation</h2>
+    <table>
+      <tr>
+        <td>Event Supported</td>
+        <td id="doEvent"></td>
+      </tr>
+      <tr>
+        <td>Tilt Left/Right [gamma]</td>
+        <td id="doTiltLR"></td>
+      </tr>
+      <tr>
+        <td>Tilt Front/Back [beta]</td>
+        <td id="doTiltFB"></td>
+      </tr>
+      <tr>
+        <td>Direction [alpha]</td>
+        <td id="doDirection"></td>
+      </tr>
+     </table>
+  </div>
+
+  <!-- <div class="container" style="perspective: 300;">
+    <img src="html5_logo.png" id="imgLogo" class="logo">
+  </div> -->
+  </body>
+</html>
