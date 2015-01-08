@@ -48,7 +48,17 @@ func main() {
                 fmt.Println("error:", err)
             }
 
-            fmt.Println(c)
+
+            var slope, pslope float32
+            if c.Y != 0 && c.X != 0 {
+                slope = float32(c.Y) / float32(c.X)
+                pslope = -float32(c.X) / float32(c.Y)
+            }
+
+            fmt.Printf("%v \t %f \t %f\n", c, slope, pslope)
+
+            
+            
 
             // switch {
             // case c.LR >= 0:
@@ -92,9 +102,9 @@ type FourPoints struct {
 }
 
 type Orientation struct {
-    LR float32
-    FB float32
-    Dir float32
+    X int `json:"lr"`
+    Y int `json:"fb"`
+    Dir int `json:"dir"`
 }
 
 func calculator(in chan Vector, _ chan *FourPoints) {
