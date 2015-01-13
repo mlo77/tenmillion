@@ -57,20 +57,23 @@
         socket.emit('msga', "DeviceOrientation is supported")
         window.addEventListener('deviceorientation', function(eventData) {
           // gamma is the left-to-right tilt in degrees, where right is positive
-          var tiltLR = Math.round(eventData.gamma);
+          var tiltLR = eventData.gamma;
+          var rlr = Math.round(eventData.gamma);
 
           // beta is the front-to-back tilt in degrees, where front is positive
-          var tiltFB = Math.round(-eventData.beta);
+          var tiltFB = -eventData.beta;
+          var rfb = Math.round(-eventData.beta);
 
           // alpha is the compass direction the device is facing in degrees
           var dir = Math.round(eventData.alpha)
+          var rdir = eventData.alpha
 
-          if (oldGamma == tiltLR && olbBeta == tiltFB && oldAlpha == dir)
+          if (oldGamma == rlr && olbBeta == rfb && oldAlpha == rdir)
             return;
 
-          oldGamma = tiltLR;
-          olbBeta = tiltFB;
-          oldAlpha = dir;
+          oldGamma = rlr;
+          olbBeta = rfb;
+          oldAlpha = rdir;
 
           // call our orientation event handler
           deviceOrientationHandler(tiltLR, tiltFB, dir);

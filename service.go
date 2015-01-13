@@ -11,6 +11,8 @@ import (
     "github.com/googollee/go-socket.io"
     "fmt"
     "encoding/json"
+    "math"
+    "github.com/mlo77/tenmillion/space"
 )
 
 var addr = flag.String("addr", ":1718", "http service address") // Q=17, R=18
@@ -50,13 +52,16 @@ func main() {
 
 
             var slope, pslope float32
+            var strength float64
             if c.Y != 0 && c.X != 0 {
-                slope = float32(c.Y) / float32(c.X)
-                pslope = -float32(c.X) / float32(c.Y)
+                slope = c.Y / c.X
+                pslope = -c.X / c.Y
+                strength = math.Sqrt(float64 (c.X*c.X + c.Y*c.Y))
             }
 
-            fmt.Printf("%v \t %f \t %f\n", c, slope, pslope)
+            fmt.Printf("%v \t %f \t %f \t %f\n", c, slope, pslope, strength)
 
+            space.ShortestDistance(space.Point3d{}, pslope)
             
             
 
@@ -102,9 +107,9 @@ type FourPoints struct {
 }
 
 type Orientation struct {
-    X int `json:"lr"`
-    Y int `json:"fb"`
-    Dir int `json:"dir"`
+    X float32 `json:"lr"`
+    Y float32 `json:"fb"`
+    Dir float32 `json:"dir"`
 }
 
 func calculator(in chan Vector, _ chan *FourPoints) {
@@ -119,4 +124,6 @@ func calculator(in chan Vector, _ chan *FourPoints) {
         }
     }     
 }
+
+
 
