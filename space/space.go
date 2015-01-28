@@ -1,6 +1,7 @@
 package space 
 
 import (
+	_"fmt"
 )
 
 type Point3d struct {
@@ -9,4 +10,6 @@ type Point3d struct {
 	Z float32
 }
 
-func ShortestDistance()
+func ShortestDistance(p Point3d, lineslope float32, plineslope float32) float32{
+	return 0
+}

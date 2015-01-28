@@ -2,94 +2,122 @@ package main
 
 import (
     "flag"
-    _"html/template"
-    "log"
-    _"io"
-    "net/http"
-    _"golang.org/x/net/websocket"
-    _"github.com/justinfx/go-socket.io/socketio"
-    "github.com/googollee/go-socket.io"
+    _"log"
+    _"net/http"
     "fmt"
     "encoding/json"
-    "math"
-    "github.com/mlo77/tenmillion/space"
+    _"github.com/mlo77/tenmillion/space"
+    "github.com/mlo77/webobs"
+    "os"
+    "os/signal"
+    "bufio"
 )
+
+
+var wo *webobs.Server
+var c chan []byte
+
+type hello struct {
+    A string `json:"a"`
+    B string `json:"b"`
+}
+
+func printAck(tag string, data []byte) {
+    fmt.Println("APP", tag, string(data))
+    h := hello{}
+    json.Unmarshal(data, &h)
+    fmt.Println(h)
+}
+
+func exit() {
+    fmt.Println("exit gracefully")
+    os.Exit(0)
+}
+
+func readInput() {
+    reader := bufio.NewReader(os.Stdin)
+    for {
+        input, _ := reader.ReadString('\n')
+        switch input {
+        case "quit\n":
+            exit()
+        case "test2\n":
+            wo.WriteCh <- webobs.Message{Tag: "view", Data: []byte("tesssssst222")}
+        }
+    }
+}
 
 var addr = flag.String("addr", ":1718", "http service address") // Q=17, R=18
 
-func main() {
-    calcIn := make(chan Vector)
-    calcOut := make(chan *FourPoints)
-    botChan := make(chan int)
-    go calculator(calcIn, calcOut)
-    //go startBot(botChan)
 
-    server, err := socketio.NewServer(nil)
+func ctrlIn(tag string, data []byte) {
+    var c Orientation
+    err := json.Unmarshal(data, &c)
     if err != nil {
-        log.Fatal(err)
+        fmt.Println("error:", err)
     }
-    server.On("connection", func(so socketio.Socket) {
-        log.Println("on connection")
-        so.On("cmd", func(pl string) {
-            var c Vector
-            err := json.Unmarshal([]byte(pl), &c)
-            if err != nil {
-                fmt.Println("error:", err)
-            }
-            calcIn <- c
-            botChan <- 1
-            fmt.Printf("azeaze %+v", c)
-        })
-        so.On("msga", func(m string) {
-            log.Println(m)
-        })
-        so.On("orientation", func(m string) {
-            var c Orientation
-            err := json.Unmarshal([]byte(m), &c)
-            if err != nil {
-                fmt.Println("error:", err)
-            }
 
+    var slope, pslope float32
+    if c.Y != 0 && c.X != 0 {
+        slope = c.Y / c.X
+        pslope = -c.X / c.Y
+    }
 
-            var slope, pslope float32
-            var strength float64
-            if c.Y != 0 && c.X != 0 {
-                slope = c.Y / c.X
-                pslope = -c.X / c.Y
-                strength = math.Sqrt(float64 (c.X*c.X + c.Y*c.Y))
-            }
+    fmt.Printf("%v \t %f \t %f\n", c, slope, pslope)
 
-            fmt.Printf("%v \t %f \t %f \t %f\n", c, slope, pslope, strength)
+    //space.ShortestDistance(space.Point3d{}, slope, pslope)
 
-            space.ShortestDistance(space.Point3d{}, pslope)
-            
-            
+    processThis(c, slope, pslope)
 
-            // switch {
-            // case c.LR >= 0:
-            //     botChan <- 7
-            // case c.LR < 0:
-            //     botChan <- -7
-            // case c.FB >= 0:
-            //     botChan <- 11
-            // case c.FB < 0:
-            //     botChan <- -11
-            // }
-        })
-        so.On("disconnection", func() {
-            log.Println("on disconnect")
-        })
-    })
-    server.On("error", func(so socketio.Socket, err error) {
-        log.Println("error:", err)
-    })
-
-    http.Handle("/socket.io/", server)
-    http.Handle("/", http.FileServer(http.Dir("./asset")))
-    log.Println("Serving at localhost:1718...")
-    log.Fatal(http.ListenAndServe(*addr, nil))
+    vd := ViewData{Orient:c, Slope:slope, Pslope:pslope}
+    viewdata, _ := json.Marshal(vd)
+    wo.WriteCh <- webobs.Message{Tag: "view", Data: viewdata}
 
 }
+
+func main() {
+
+    wo = webobs.StartServer(":8080")
+    wo.SetChannel("view", nil, "./asset")
+    wo.SetChannel("ctrl", ctrlIn, "./asset")
+
+    // capture ctrl+c, so we can exit properly
+    sig := make(chan os.Signal, 1)
+    signal.Notify(sig, os.Interrupt)
+    go func() {
+        <-sig // blocks until something is read in the channel
+        fmt.Println("caught SIGINT")
+        exit()
+    }()
+    readInput()
+
+}
+
+func processThis(o Orientation, sl, psl float32) {
+    // config is 4 bases
+    // 10 10
+
+    // for each base
+
+    nearestToP := func(xb, yb float32) (float32, float32){
+        b := yb - sl * xb
+        xn := -b / (sl - psl)
+        yn := psl * xn
+        return xn, yn
+    }
+
+    fmt.Println(nearestToP(-10, 10))
+    fmt.Println(nearestToP(10, 10))
+    fmt.Println(nearestToP(10, -10))
+    fmt.Println(nearestToP(-10, -10))
+}
+
+  var b = (yb - sl * xb)
+  var xn = (-b / (sl - psl))
+  var yn = (psl * xn)
+  var dist = Math.abs(xb-xn) + Math.abs(yb-yn)
+  return [xn, yn, b, dist * st
+
 
 var clientCh chan *FourPoints = make(chan *FourPoints)
 
@@ -110,6 +138,12 @@ type Orientation struct {
     X float32 `json:"lr"`
     Y float32 `json:"fb"`
     Dir float32 `json:"dir"`
+}
+
+type ViewData struct {
+    Orient Orientation
+    Slope float32
+    Pslope float32
 }
 
 func calculator(in chan Vector, _ chan *FourPoints) {
