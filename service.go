@@ -1,10 +1,11 @@
 package main
 
 import (
-    "flag"
+    _"flag"
     "fmt"
     "encoding/json"
     "github.com/mlo77/webobs"
+    "github.com/mlo77/tenmillion/adapter"
     "os"
     "os/signal"
     "bufio"
@@ -29,7 +30,7 @@ type ViewData struct {
 
 var wo *webobs.Server
 var c chan []byte
-var adapters []chan int
+var adapters []chan float32
 
 
 func exit() {
@@ -101,36 +102,36 @@ func processCtrl(c Orientation) {
     viewdata, _ := json.Marshal(vd)
     wo.WriteCh <- webobs.Message{Tag: "view", Data: viewdata}
 
-    Lx = c.X*10
-    Ly = c.Y*10
+    Lx := c.X*10
+    Ly := c.Y*10
     leanVsPslope := sign((Lx*(-pslope)) + Ly)
-    var x int = 100
-    var y int = 100
+    var x float32 = 100
+    var y float32 = 100
 
     pslopeVsWS := sign( (-x*(-pslope)) - y ) // -y = x*-psl
     pslopeVsES := sign( (x*(-pslope)) - y ) // -y = x*-psl
     pslopeVsWN := sign( (-x*(-pslope)) + y) // -y = x*-psl
     pslopeVsEN := sign( (x*(-pslope)) + y ) // -y = x*-psl
 
-    if leanVsPslope == pslopeVsEN {
+    if leanVsPslope == pslopeVsEN { // view bl
         adapters[0] <- np11[2]
     } else {
         adapters[0] <- -np11[2]
     }
 
-    if leanVsPslope == pslopeVsES {
+    if leanVsPslope == pslopeVsES { // view tl
         adapters[1] <- np10[2]
     } else {
         adapters[1] <- -np10[2]
     }
 
-    if leanVsPslope == pslopeVsWS {
+    if leanVsPslope == pslopeVsWS { // view tr
         adapters[2] <- np00[2]
     } else {
         adapters[2] <- -np00[2]
     }
 
-    if leanVsPslope == pslopeVsWN {
+    if leanVsPslope == pslopeVsWN { // view br
         adapters[3] <- np01[2]
     } else {
         adapters[3] <- -np01[2]
@@ -156,9 +157,9 @@ func main() {
     // init and start adapters 
     numadap := 4
     gpios := []int {17, 18, 22, 23}
-    adapters = make([] chan int, numadap)
+    adapters = make([] chan float32, numadap)
     for i:=0; i<numadap; i++ {
-        adapters[i] = make(chan int)
+        adapters[i] = make(chan float32)
         go adapter.ServoListen(adapters[i], gpios[i])
     }
 
