@@ -2,11 +2,8 @@ package main
 
 import (
     "flag"
-    _"log"
-    _"net/http"
     "fmt"
     "encoding/json"
-    _"github.com/mlo77/tenmillion/space"
     "github.com/mlo77/webobs"
     "os"
     "os/signal"
@@ -14,23 +11,29 @@ import (
 )
 
 
+type Orientation struct {
+    X float32 `json:"lr"`
+    Y float32 `json:"fb"`
+    Dir float32 `json:"dir"`
+}
+
+type ViewData struct {
+    Orient Orientation
+    Slope float32
+    Pslope float32
+    NearestPoint11 [3]float32
+    NearestPoint10 [3]float32
+    NearestPoint01 [3]float32
+    NearestPoint00 [3]float32
+}
+
 var wo *webobs.Server
 var c chan []byte
+var adapters []chan int
 
-type hello struct {
-    A string `json:"a"`
-    B string `json:"b"`
-}
-
-func printAck(tag string, data []byte) {
-    fmt.Println("APP", tag, string(data))
-    h := hello{}
-    json.Unmarshal(data, &h)
-    fmt.Println(h)
-}
 
 func exit() {
-    fmt.Println("exit gracefully")
+    fmt.Println("exit")
     os.Exit(0)
 }
 
@@ -47,8 +50,19 @@ func readInput() {
     }
 }
 
-var addr = flag.String("addr", ":1718", "http service address") // Q=17, R=18
+func abs(v float32) float32 {
+    if v < 0 {
+        return -v
+    }
+    return v
+}
 
+func sign(v float32) bool {
+    if v < 0 {
+        return false
+    }
+    return true
+}
 
 func ctrlIn(tag string, data []byte) {
     var c Orientation
@@ -57,21 +71,70 @@ func ctrlIn(tag string, data []byte) {
         fmt.Println("error:", err)
     }
 
+    processCtrl(c)
+
+}
+
+func processCtrl(c Orientation) {
     var slope, pslope float32
     if c.Y != 0 && c.X != 0 {
         slope = c.Y / c.X
         pslope = -c.X / c.Y
     }
 
-    fmt.Printf("%v \t %f \t %f\n", c, slope, pslope)
+    stren := (abs(c.X)+abs(c.Y)) / 50
 
-    //space.ShortestDistance(space.Point3d{}, slope, pslope)
+    np11:= nearestToP(100, 100, slope, pslope, stren)
+    np10:= nearestToP(100, -100, slope, pslope, stren)
+    np01:= nearestToP(-100, 100, slope, pslope, stren)
+    np00:= nearestToP(-100, -100, slope, pslope, stren)
 
-    processThis(c, slope, pslope)
-
-    vd := ViewData{Orient:c, Slope:slope, Pslope:pslope}
+    vd := ViewData{
+        Orient:c, 
+        Slope:slope, 
+        Pslope:pslope,
+        NearestPoint11: np11,
+        NearestPoint10: np10,
+        NearestPoint01: np01,
+        NearestPoint00: np00,
+    }
     viewdata, _ := json.Marshal(vd)
     wo.WriteCh <- webobs.Message{Tag: "view", Data: viewdata}
+
+    Lx = c.X*10
+    Ly = c.Y*10
+    leanVsPslope := sign((Lx*(-pslope)) + Ly)
+    var x int = 100
+    var y int = 100
+
+    pslopeVsWS := sign( (-x*(-pslope)) - y ) // -y = x*-psl
+    pslopeVsES := sign( (x*(-pslope)) - y ) // -y = x*-psl
+    pslopeVsWN := sign( (-x*(-pslope)) + y) // -y = x*-psl
+    pslopeVsEN := sign( (x*(-pslope)) + y ) // -y = x*-psl
+
+    if leanVsPslope == pslopeVsEN {
+        adapters[0] <- np11[2]
+    } else {
+        adapters[0] <- -np11[2]
+    }
+
+    if leanVsPslope == pslopeVsES {
+        adapters[1] <- np10[2]
+    } else {
+        adapters[1] <- -np10[2]
+    }
+
+    if leanVsPslope == pslopeVsWS {
+        adapters[2] <- np00[2]
+    } else {
+        adapters[2] <- -np00[2]
+    }
+
+    if leanVsPslope == pslopeVsWN {
+        adapters[3] <- np01[2]
+    } else {
+        adapters[3] <- -np01[2]
+    }
 
 }
 
@@ -89,75 +152,28 @@ func main() {
         fmt.Println("caught SIGINT")
         exit()
     }()
+
+    // init and start adapters 
+    numadap := 4
+    gpios := []int {17, 18, 22, 23}
+    adapters = make([] chan int, numadap)
+    for i:=0; i<numadap; i++ {
+        adapters[i] = make(chan int)
+        go adapter.ServoListen(adapters[i], gpios[i])
+    }
+
     readInput()
 
 }
 
-func processThis(o Orientation, sl, psl float32) {
-    // config is 4 bases
-    // 10 10
-
-    // for each base
-
-    nearestToP := func(xb, yb float32) (float32, float32){
-        b := yb - sl * xb
-        xn := -b / (sl - psl)
-        yn := psl * xn
-        return xn, yn
-    }
-
-    fmt.Println(nearestToP(-10, 10))
-    fmt.Println(nearestToP(10, 10))
-    fmt.Println(nearestToP(10, -10))
-    fmt.Println(nearestToP(-10, -10))
+func nearestToP (xb, yb, sl, psl, stren float32) [3]float32{
+    b := yb - sl * xb
+    xn := -b / (sl - psl)
+    yn := psl * xn
+    dist := abs(xb-xn) + abs(yb-yn)
+    return [3]float32{xn, yn, dist * stren} 
 }
 
-  var b = (yb - sl * xb)
-  var xn = (-b / (sl - psl))
-  var yn = (psl * xn)
-  var dist = Math.abs(xb-xn) + Math.abs(yb-yn)
-  return [xn, yn, b, dist * st
-
-
-var clientCh chan *FourPoints = make(chan *FourPoints)
-
-type Vector struct {
-    X int `json:"x"`
-    Y int `json:"y"`
-    Z int `json:"z"`
-}
-
-type FourPoints struct {
-    TL Vector
-    TR Vector
-    BL Vector
-    BR Vector
-}
-
-type Orientation struct {
-    X float32 `json:"lr"`
-    Y float32 `json:"fb"`
-    Dir float32 `json:"dir"`
-}
-
-type ViewData struct {
-    Orient Orientation
-    Slope float32
-    Pslope float32
-}
-
-func calculator(in chan Vector, _ chan *FourPoints) {
-    for {
-        select {
-        case v := <-in:
-            fmt.Println("caclulate!")
-            fmt.Println(v)
-            //resp := new (FourPoints)
-            fmt.Println("caclulate done!")
-            //out<-resp        
-        }
-    }     
-}
 
 
 

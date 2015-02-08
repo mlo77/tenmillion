@@ -10,6 +10,7 @@ ctx = canvas.getContext('2d');
 
 soc.onmessage = function (event) {
   var obj = JSON.parse(event.data)
+  console.log(obj)
   slope = obj.Slope
   pslope = obj.Pslope
   Lx = Math.floor(obj.Orient.lr*10)
@@ -94,15 +95,6 @@ function draw(){
     ctx.fillRect(100+Ox, 100+Oy-np[3], 10, np[3])
   }
 
-
-  // if (Ly >= Lxp && np[1] >= np[0] * (-pslope)) {
-  //   ctx.fillRect(100+Ox, 100+Oy, 20, np[3])
-  // } else {
-  //   ctx.strokeStyle = 'green';
-  //   ctx.fillRect(100+Ox, 100+Oy-np[3], 20, np[3])
-  // }
-  // ctx.restore()
-
   np = nearestToP(-100, 100, -slope, -pslope)
   ctx.beginPath()
   ctx.moveTo(-100+Ox, 100+Oy);
@@ -115,11 +107,6 @@ function draw(){
   } else {
     ctx.fillRect(-100+Ox, 100+Oy-np[3], 10, np[3])
   }
-  // if (Ly >= Lxp && np[1] >= np[0] * (-pslope)) {
-  //   ctx.fillRect(-100+Ox, 100+Oy, 20, np[3])
-  // } else {
-  //   ctx.fillRect(-100+Ox, 100+Oy-np[3], 20, np[3])
-  // }
 
   np = nearestToP(-100, -100, -slope, -pslope)
   ctx.beginPath()
@@ -133,12 +120,6 @@ function draw(){
   } else {
     ctx.fillRect(-100+Ox, -100+Oy-np[3], 10, np[3])
   }
-
-  // if (Ly >= Lxp && np[1] >= np[0] * (-pslope)) {
-  //   ctx.fillRect(-100+Ox, -100+Oy, 20, np[3])
-  // } else {
-  //   ctx.fillRect(-100+Ox, -100+Oy-np[3], 20, np[3])
-  // }
 
   ctx.restore();
   window.requestAnimationFrame(draw);
