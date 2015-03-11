@@ -1,10 +1,11 @@
 package pwm
 
 
-// #cgo LDFLAGS: -L/home/mlo/__P/go/src/github.com/mlo77/tenmillion/pwm/ -lpwm
+// #cgo LDFLAGS: -L./ -lpwm
 // #include "pwm.h"
 import "C"
 import "fmt"
+import "time"
 
 func Pwm_setup(pw_incr_us, hw int) int {
 	n, err := C.setup(C.int(pw_incr_us), C.int(hw))
@@ -110,3 +111,18 @@ func Pwm_get_channel_subcycle_time_us(channel int) int {
 	return int(n)
 }
 
+func Pwm_test() {
+	Pwm_set_loglevel(0)
+	Pwm_setup(10, 0)
+	Pwm_init_channel(0, 20000)
+	Pwm_print_channel(0)
+
+	Pwm_add_channel_pulse(0, 17, 0, 50)
+	
+	time.Sleep(5 * time.Second)
+
+	Pwm_clear_channel_gpio(0, 17)
+	Pwm_shutdown()
+	fmt.Println("ok")
+
+}

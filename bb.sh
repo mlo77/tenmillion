@@ -1,3 +1,3 @@
 #!/bin/bash
 
-GOARM=6 GOARCH=arm GOOS=linux go build *.go
+GOARM=6 GOARCH=arm GOOS=linux go build service.go

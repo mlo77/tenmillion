@@ -5,7 +5,7 @@ import (
     "fmt"
     "encoding/json"
     "github.com/mlo77/webobs"
-    "github.com/mlo77/tenmillion/adapter"
+    "./adapter"
     "os"
     "os/signal"
     "bufio"
@@ -31,10 +31,14 @@ type ViewData struct {
 var wo *webobs.Server
 var c chan []byte
 var adapters []chan float32
-
+var adaptersDone chan bool
 
 func exit() {
     fmt.Println("exit")
+    for _, a := range adapters {
+        close(a)
+    }
+    <-adaptersDone    
     os.Exit(0)
 }
 
@@ -47,6 +51,11 @@ func readInput() {
             exit()
         case "test2\n":
             wo.WriteCh <- webobs.Message{Tag: "view", Data: []byte("tesssssst222")}
+        case "test\n":
+            adapters[0] <- 50.0
+        case "stop\n":
+            adapters[0] <- 0
+
         }
     }
 }
@@ -158,9 +167,10 @@ func main() {
     numadap := 4
     gpios := []int {17, 18, 22, 23}
     adapters = make([] chan float32, numadap)
+    adaptersDone = make(chan bool)
     for i:=0; i<numadap; i++ {
         adapters[i] = make(chan float32)
-        go adapter.ServoListen(adapters[i], gpios[i])
+        go adapter.ServoListen(adapters[i], gpios[i], i, adaptersDone)
     }
 
     readInput()
